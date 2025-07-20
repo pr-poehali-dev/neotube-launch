@@ -9,11 +9,12 @@ import Icon from '@/components/ui/icon';
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeSection, setActiveSection] = useState('home');
-  const [openTabs, setOpenTabs] = useState(['home', 'subscriptions', 'trending']);
+  const [openTabs, setOpenTabs] = useState(['subscriptions', 'trending']);
   const [checkedVideos, setCheckedVideos] = useState<number[]>([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showCursor, setShowCursor] = useState(true);
   const [cursorTimeout, setCursorTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [showDashboard, setShowDashboard] = useState(false);
 
   const videoData = [
     {
@@ -59,12 +60,20 @@ const Index = () => {
   const regularVideos = videoData.filter(video => !video.isLive);
 
   const sidebarItems = [
-    { id: 'home', label: 'Главная', icon: 'Home' },
     { id: 'subscriptions', label: 'Подписки', icon: 'Users' },
     { id: 'trending', label: 'Трендовое', icon: 'TrendingUp' },
     { id: 'history', label: 'История', icon: 'History' },
     { id: 'library', label: 'Библиотека', icon: 'BookOpen' },
     { id: 'upload', label: 'Загрузка', icon: 'Upload' },
+  ];
+
+  const dashboardItems = [
+    { id: 'analytics', label: 'Аналитика', icon: 'BarChart3', description: 'Статистика просмотров и доходов' },
+    { id: 'monetization', label: 'Монетизация', icon: 'DollarSign', description: 'Настройки рекламы и донатов' },
+    { id: 'trends', label: 'Тренды', icon: 'TrendingUp', description: 'Популярные темы и хештеги' },
+    { id: 'studio', label: 'Творческая студия', icon: 'Video', description: 'Редактирование и управление контентом' },
+    { id: 'community', label: 'Сообщество', icon: 'MessageCircle', description: 'Комментарии и взаимодействие' },
+    { id: 'settings', label: 'Настройки канала', icon: 'Settings', description: 'Профиль и параметры' },
   ];
 
   const handleCloseTab = (tabId: string) => {
@@ -80,6 +89,10 @@ const Index = () => {
       setOpenTabs([...openTabs, tabId]);
     }
     setActiveSection(tabId);
+  };
+
+  const toggleDashboard = () => {
+    setShowDashboard(!showDashboard);
   };
 
   const toggleVideoCheck = (videoId: number) => {
@@ -144,9 +157,13 @@ const Index = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <div className="bg-gradient-to-r from-blue-500 to-blue-700 p-2 rounded-lg">
+              <button 
+                onClick={toggleDashboard}
+                className="bg-gradient-to-r from-blue-500 to-blue-700 p-2 rounded-lg hover:from-blue-600 hover:to-blue-800 transition-all duration-200 hover:scale-110"
+                title="Панель управления"
+              >
                 <Icon name="Zap" size={24} className="text-white" />
-              </div>
+              </button>
               <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent">
                 NeoTube
               </h1>
@@ -237,6 +254,59 @@ const Index = () => {
           })}
         </div>
       </div>
+
+      {/* Dashboard Panel */}
+      {showDashboard && (
+        <div className="fixed inset-0 bg-black/50 z-50 animate-fade-in" onClick={toggleDashboard}>
+          <div 
+            className="absolute left-0 top-0 h-full w-80 bg-slate-800 shadow-2xl transform transition-transform duration-300 animate-slide-in-right"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <Icon name="Zap" size={20} className="text-blue-400" />
+                  Панель управления
+                </h2>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={toggleDashboard}
+                  className="text-slate-400 hover:text-white"
+                >
+                  <Icon name="X" size={16} />
+                </Button>
+              </div>
+              
+              <div className="space-y-3">
+                {dashboardItems.map((item) => (
+                  <Card key={item.id} className="bg-slate-700 border-slate-600 hover:bg-slate-600 transition-all duration-200 cursor-pointer group">
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 bg-blue-600/20 rounded-lg group-hover:bg-blue-600/30 transition-colors">
+                          <Icon name={item.icon as any} size={20} className="text-blue-400" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-white mb-1">{item.label}</h3>
+                          <p className="text-slate-400 text-sm">{item.description}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+              
+              <div className="mt-6 pt-6 border-t border-slate-700">
+                <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4 rounded-lg">
+                  <h3 className="font-semibold text-white mb-2">💰 Доходы за месяц</h3>
+                  <div className="text-2xl font-bold text-white mb-1">₽47,382</div>
+                  <div className="text-blue-200 text-sm">+23% к прошлому месяцу</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="flex">
         {/* Sidebar */}
