@@ -9,6 +9,8 @@ import Icon from '@/components/ui/icon';
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeSection, setActiveSection] = useState('home');
+  const [openTabs, setOpenTabs] = useState(['home', 'subscriptions', 'trending']);
+  const [checkedVideos, setCheckedVideos] = useState<number[]>([]);
 
   const videoData = [
     {
@@ -62,6 +64,29 @@ const Index = () => {
     { id: 'upload', label: 'Загрузка', icon: 'Upload' },
   ];
 
+  const handleCloseTab = (tabId: string) => {
+    const newTabs = openTabs.filter(tab => tab !== tabId);
+    setOpenTabs(newTabs);
+    if (activeSection === tabId && newTabs.length > 0) {
+      setActiveSection(newTabs[0]);
+    }
+  };
+
+  const handleOpenTab = (tabId: string) => {
+    if (!openTabs.includes(tabId)) {
+      setOpenTabs([...openTabs, tabId]);
+    }
+    setActiveSection(tabId);
+  };
+
+  const toggleVideoCheck = (videoId: number) => {
+    setCheckedVideos(prev => 
+      prev.includes(videoId) 
+        ? prev.filter(id => id !== videoId)
+        : [...prev, videoId]
+    );
+  };
+
   return (
     <div className="min-h-screen bg-slate-900 text-white">
       {/* Header */}
@@ -107,6 +132,44 @@ const Index = () => {
         </div>
       </header>
 
+      {/* Tabs */}
+      <div className="bg-slate-800 border-b border-slate-700 px-6">
+        <div className="flex gap-1 overflow-x-auto">
+          {openTabs.map((tabId) => {
+            const tabItem = sidebarItems.find(item => item.id === tabId);
+            if (!tabItem) return null;
+            
+            return (
+              <div
+                key={tabId}
+                className={`group flex items-center gap-2 px-4 py-2 border-b-2 transition-all duration-200 min-w-fit ${
+                  activeSection === tabId
+                    ? 'border-blue-500 bg-slate-700 text-white'
+                    : 'border-transparent text-slate-400 hover:text-white hover:bg-slate-700/50'
+                }`}
+              >
+                <button
+                  onClick={() => setActiveSection(tabId)}
+                  className="flex items-center gap-2 hover:text-blue-400 transition-colors"
+                >
+                  <Icon name={tabItem.icon as any} size={16} />
+                  <span className="font-medium text-sm">{tabItem.label}</span>
+                </button>
+                
+                {openTabs.length > 1 && (
+                  <button
+                    onClick={() => handleCloseTab(tabId)}
+                    className="ml-2 p-1 rounded-full opacity-0 group-hover:opacity-100 hover:bg-slate-600 transition-all duration-200"
+                  >
+                    <Icon name="X" size={12} className="text-slate-400 hover:text-white" />
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       <div className="flex">
         {/* Sidebar */}
         <aside className="w-64 bg-slate-800 min-h-screen p-4">
@@ -114,15 +177,20 @@ const Index = () => {
             {sidebarItems.map((item) => (
               <button
                 key={item.id}
-                onClick={() => setActiveSection(item.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                onClick={() => handleOpenTab(item.id)}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
                   activeSection === item.id 
-                    ? 'bg-blue-600 text-white' 
-                    : 'text-slate-300 hover:bg-slate-700 hover:text-white'
+                    ? 'bg-blue-600 text-white shadow-lg' 
+                    : 'text-slate-300 hover:bg-slate-700 hover:text-white hover:scale-105'
                 }`}
               >
                 <Icon name={item.icon as any} size={20} />
                 <span className="font-medium">{item.label}</span>
+                {openTabs.includes(item.id) && (
+                  <Badge variant="secondary" className="ml-auto bg-blue-500/20 text-blue-300 text-xs">
+                    •
+                  </Badge>
+                )}
               </button>
             ))}
           </nav>
@@ -139,7 +207,7 @@ const Index = () => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {liveStreams.map((video) => (
-                  <Card key={video.id} className="bg-slate-800 border-slate-700 hover:bg-slate-750 transition-colors cursor-pointer group">
+                  <Card key={video.id} className="bg-slate-800 border-slate-700 hover:bg-slate-750 transition-all duration-300 cursor-pointer group hover:scale-105 hover:shadow-xl">
                     <div className="relative">
                       <img 
                         src={video.thumbnail} 
@@ -154,6 +222,23 @@ const Index = () => {
                           {video.views}
                         </Badge>
                       </div>
+                      
+                      {/* Checkbox for marking videos */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleVideoCheck(video.id);
+                        }}
+                        className={`absolute top-2 left-2 w-6 h-6 rounded border-2 flex items-center justify-center transition-all duration-200 ${
+                          checkedVideos.includes(video.id)
+                            ? 'bg-blue-600 border-blue-600 text-white'
+                            : 'bg-slate-900/60 border-slate-400 hover:border-blue-400'
+                        }`}
+                      >
+                        {checkedVideos.includes(video.id) && (
+                          <Icon name="Check" size={14} className="text-white" />
+                        )}
+                      </button>
                     </div>
                     <CardContent className="p-4">
                       <h3 className="font-semibold text-white mb-2 line-clamp-2 group-hover:text-blue-400 transition-colors">
@@ -176,7 +261,7 @@ const Index = () => {
             <h2 className="text-xl font-bold mb-4">Рекомендации</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {regularVideos.map((video) => (
-                <Card key={video.id} className="bg-slate-800 border-slate-700 hover:bg-slate-750 transition-colors cursor-pointer group">
+                <Card key={video.id} className="bg-slate-800 border-slate-700 hover:bg-slate-750 transition-all duration-300 cursor-pointer group hover:scale-105 hover:shadow-xl">
                   <div className="relative">
                     <img 
                       src={video.thumbnail} 
@@ -186,6 +271,23 @@ const Index = () => {
                     <Badge className="absolute top-2 right-2 bg-slate-900/80 text-white text-xs px-2 py-1">
                       {video.duration}
                     </Badge>
+                    
+                    {/* Checkbox for marking videos */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleVideoCheck(video.id);
+                      }}
+                      className={`absolute top-2 left-2 w-6 h-6 rounded border-2 flex items-center justify-center transition-all duration-200 ${
+                        checkedVideos.includes(video.id)
+                          ? 'bg-blue-600 border-blue-600 text-white'
+                          : 'bg-slate-900/60 border-slate-400 hover:border-blue-400'
+                      }`}
+                    >
+                      {checkedVideos.includes(video.id) && (
+                        <Icon name="Check" size={14} className="text-white" />
+                      )}
+                    </button>
                   </div>
                   <CardContent className="p-4">
                     <h3 className="font-semibold text-white mb-2 line-clamp-2 group-hover:text-blue-400 transition-colors">
