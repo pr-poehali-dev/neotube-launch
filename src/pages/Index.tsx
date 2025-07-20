@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +11,9 @@ const Index = () => {
   const [activeSection, setActiveSection] = useState('home');
   const [openTabs, setOpenTabs] = useState(['home', 'subscriptions', 'trending']);
   const [checkedVideos, setCheckedVideos] = useState<number[]>([]);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showCursor, setShowCursor] = useState(true);
+  const [cursorTimeout, setCursorTimeout] = useState<NodeJS.Timeout | null>(null);
 
   const videoData = [
     {
@@ -87,8 +90,55 @@ const Index = () => {
     );
   };
 
+  const toggleFullscreen = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+        setIsFullscreen(true);
+      } else {
+        await document.exitFullscreen();
+        setIsFullscreen(false);
+      }
+    } catch (error) {
+      console.error('Ошибка полноэкранного режима:', error);
+    }
+  };
+
+  const handleMouseMove = () => {
+    setShowCursor(true);
+    if (cursorTimeout) clearTimeout(cursorTimeout);
+    
+    if (isFullscreen) {
+      const timeout = setTimeout(() => {
+        setShowCursor(false);
+      }, 3000);
+      setCursorTimeout(timeout);
+    }
+  };
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+      if (!document.fullscreenElement) {
+        setShowCursor(true);
+        if (cursorTimeout) clearTimeout(cursorTimeout);
+      }
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('mousemove', handleMouseMove);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('mousemove', handleMouseMove);
+      if (cursorTimeout) clearTimeout(cursorTimeout);
+    };
+  }, [cursorTimeout, isFullscreen]);
+
   return (
-    <div className="min-h-screen bg-slate-900 text-white">
+    <div className={`min-h-screen bg-slate-900 text-white transition-all duration-300 ${
+      isFullscreen ? (showCursor ? 'cursor-auto' : 'cursor-none') : 'cursor-auto'
+    }`}>
       {/* Header */}
       <header className="bg-slate-800 border-b border-slate-700 px-6 py-4">
         <div className="flex items-center justify-between">
@@ -122,6 +172,15 @@ const Index = () => {
           </div>
 
           <div className="flex items-center gap-4">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={toggleFullscreen}
+              className="text-slate-300 hover:text-white hover:bg-slate-700"
+              title={isFullscreen ? 'Выйти из полноэкранного режима' : 'Полноэкранный режим'}
+            >
+              <Icon name={isFullscreen ? "Minimize2" : "Maximize2"} size={20} />
+            </Button>
             <Button variant="ghost" size="sm" className="text-slate-300 hover:text-white">
               <Icon name="Bell" size={20} />
             </Button>
@@ -133,7 +192,9 @@ const Index = () => {
       </header>
 
       {/* Tabs */}
-      <div className="bg-slate-800 border-b border-slate-700 px-6">
+      <div className={`bg-slate-800 border-b border-slate-700 transition-all duration-300 ${
+        isFullscreen ? 'px-2' : 'px-6'
+      }`}>
         <div className="flex gap-1 overflow-x-auto">
           {openTabs.map((tabId) => {
             const tabItem = sidebarItems.find(item => item.id === tabId);
@@ -142,7 +203,9 @@ const Index = () => {
             return (
               <div
                 key={tabId}
-                className={`group flex items-center gap-2 px-4 py-2 border-b-2 transition-all duration-200 min-w-fit ${
+                className={`group flex items-center border-b-2 transition-all duration-200 min-w-fit ${
+                  isFullscreen ? 'gap-1 px-2 py-2' : 'gap-2 px-4 py-2'
+                } ${
                   activeSection === tabId
                     ? 'border-blue-500 bg-slate-700 text-white'
                     : 'border-transparent text-slate-400 hover:text-white hover:bg-slate-700/50'
@@ -150,13 +213,18 @@ const Index = () => {
               >
                 <button
                   onClick={() => setActiveSection(tabId)}
-                  className="flex items-center gap-2 hover:text-blue-400 transition-colors"
+                  className={`flex items-center hover:text-blue-400 transition-colors ${
+                    isFullscreen ? 'gap-1' : 'gap-2'
+                  }`}
+                  title={isFullscreen ? tabItem.label : undefined}
                 >
                   <Icon name={tabItem.icon as any} size={16} />
-                  <span className="font-medium text-sm">{tabItem.label}</span>
+                  {!isFullscreen && (
+                    <span className="font-medium text-sm">{tabItem.label}</span>
+                  )}
                 </button>
                 
-                {openTabs.length > 1 && (
+                {openTabs.length > 1 && !isFullscreen && (
                   <button
                     onClick={() => handleCloseTab(tabId)}
                     className="ml-2 p-1 rounded-full opacity-0 group-hover:opacity-100 hover:bg-slate-600 transition-all duration-200"
@@ -172,24 +240,33 @@ const Index = () => {
 
       <div className="flex">
         {/* Sidebar */}
-        <aside className="w-64 bg-slate-800 min-h-screen p-4">
+        <aside className={`bg-slate-800 min-h-screen p-4 transition-all duration-300 ${
+          isFullscreen ? 'w-16' : 'w-64'
+        }`}>
           <nav className="space-y-2">
             {sidebarItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => handleOpenTab(item.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+                className={`w-full flex items-center rounded-lg transition-all duration-200 ${
+                  isFullscreen ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3'
+                } ${
                   activeSection === item.id 
                     ? 'bg-blue-600 text-white shadow-lg' 
                     : 'text-slate-300 hover:bg-slate-700 hover:text-white hover:scale-105'
                 }`}
+                title={isFullscreen ? item.label : undefined}
               >
                 <Icon name={item.icon as any} size={20} />
-                <span className="font-medium">{item.label}</span>
-                {openTabs.includes(item.id) && (
-                  <Badge variant="secondary" className="ml-auto bg-blue-500/20 text-blue-300 text-xs">
-                    •
-                  </Badge>
+                {!isFullscreen && (
+                  <>
+                    <span className="font-medium">{item.label}</span>
+                    {openTabs.includes(item.id) && (
+                      <Badge variant="secondary" className="ml-auto bg-blue-500/20 text-blue-300 text-xs">
+                        •
+                      </Badge>
+                    )}
+                  </>
                 )}
               </button>
             ))}
@@ -197,7 +274,9 @@ const Index = () => {
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 p-6">
+        <main className={`flex-1 transition-all duration-300 ${
+          isFullscreen ? 'p-2' : 'p-6'
+        }`}>
           {/* Live streams section */}
           {liveStreams.length > 0 && (
             <div className="mb-8">
